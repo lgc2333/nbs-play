@@ -10,7 +10,6 @@
     "clean": "rimraf ./dist && rimraf ./tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "nbs-play": "workspace:^",
-    "nbs-play-node": "workspace:^"
+    "nbs-play": "workspace:^"
   }
 }

@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base",
   "include": ["./src/**/*"],
   "compilerOptions": {
-    "module": "UMD",
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "./tsconfig.tsbuildinfo"

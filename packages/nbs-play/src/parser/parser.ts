@@ -1,4 +1,4 @@
-import { IHeader, IInstrument, ILayer, INote, ISong } from './types';
+import { IHeader, IInstrument, ILayer, INote, ISong } from './types.js';
 
 export class Parser {
   protected view: DataView;

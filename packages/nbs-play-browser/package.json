@@ -1,7 +1,7 @@
 {
-  "name": "nbs-play-node",
+  "name": "nbs-play-browser",
   "version": "0.1.0",
-  "description": "Play NBS files with Node.js",
+  "description": "Play NBS files with web browser",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
   "files": [

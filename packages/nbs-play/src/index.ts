@@ -1,2 +1,2 @@
-export * from './parser/index';
-export * from './player/index';
+export * from './parser/index.js';
+export * from './player/index.js';
