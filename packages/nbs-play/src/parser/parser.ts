@@ -84,7 +84,7 @@ export class Parser {
     let value = -1;
     for (;;) {
       const jump = this.readUShort();
-      if (!value) break;
+      if (jump === 0) break;
       value += jump;
       yield value;
     }
@@ -122,7 +122,7 @@ export class Parser {
   }
 
   protected *parseInstruments(): Generator<IInstrument> {
-    const len = this.readUShort();
+    const len = this.readUChar();
     for (let id = 0; id < len; id += 1) {
       yield {
         id,

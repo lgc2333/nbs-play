@@ -6,7 +6,7 @@
     "allowJs": true,
     "checkJs": true,
     "declaration": true,
-    // "removeComments": true,
+    "sourceMap": true,
     "newLine": "lf",
     "esModuleInterop": true,
     "downlevelIteration": true,
