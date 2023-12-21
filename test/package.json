@@ -1,0 +1,11 @@
+{
+  "name": "test",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "dependencies": {
+    "nbs-play": "file:../packages/nbs-play",
+    "nbs-play-node": "file:../packages/nbs-play-node"
+  }
+}

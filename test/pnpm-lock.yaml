@@ -1,0 +1,17 @@
+lockfileVersion: '6.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+dependencies:
+  nbs-play-lib:
+    specifier: file:..
+    version: file:..
+
+packages:
+
+  file:..:
+    resolution: {directory: .., type: directory}
+    name: nbs-play-lib
+    dev: false

@@ -1,0 +1,26 @@
+{
+  "name": "nbs-play",
+  "version": "0.1.0",
+  "description": "The base library for playing nbs files",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./parser": "./dist/parser/index.js",
+    "./player": "./dist/player/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {},
+  "keywords": [
+    "nbs",
+    "noteblock",
+    "minecraft"
+  ],
+  "author": "student_2333 <lgc2333@126.com> (https://lgc2333.top)",
+  "repository": "github:lgc2333/nbs-play",
+  "license": "MIT",
+  "funding": "https://afdian.net/a/lgc2333",
+  "dependencies": {}
+}
