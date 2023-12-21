@@ -1,2 +1,2 @@
-export * from './parser';
-export * from './player';
+export * from './parser/index';
+export * from './player/index';

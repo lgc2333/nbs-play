@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base",
   "include": ["./src/**/*"],
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "./tsconfig.tsbuildinfo"

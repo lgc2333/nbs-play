@@ -7,7 +7,10 @@
   "files": [
     "dist"
   ],
-  "scripts": {},
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
   "keywords": [
     "nbs",
     "noteblock",
@@ -17,5 +20,7 @@
   "repository": "github:lgc2333/nbs-play",
   "license": "MIT",
   "funding": "https://afdian.net/a/lgc2333",
-  "dependencies": {}
+  "dependencies": {
+    "nbs-play": "workspace:^"
+  }
 }

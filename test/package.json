@@ -2,10 +2,14 @@
   "name": "test",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
   "dependencies": {
-    "nbs-play": "file:../packages/nbs-play",
-    "nbs-play-node": "file:../packages/nbs-play-node"
+    "nbs-play": "workspace:^",
+    "nbs-play-node": "workspace:^"
   }
 }

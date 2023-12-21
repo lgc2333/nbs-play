@@ -4,15 +4,13 @@
   "description": "The base library for playing nbs files",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./parser": "./dist/parser/index.js",
-    "./player": "./dist/player/index.js"
-  },
   "files": [
     "dist"
   ],
-  "scripts": {},
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w"
+  },
   "keywords": [
     "nbs",
     "noteblock",
