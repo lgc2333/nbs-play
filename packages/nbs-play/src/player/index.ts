@@ -57,6 +57,8 @@ export function buildPlayLayer(song: ISong): IPlayLayer[] {
 }
 
 export class BasePlayer extends EventTarget {
+  readonly builtinInstruments = BUILTIN_INSTRUMENTS;
+
   readonly instruments: IInstrument[];
 
   readonly layers: IPlayLayer[];
@@ -86,7 +88,7 @@ export class BasePlayer extends EventTarget {
   constructor(public readonly song: ISong) {
     super();
     this.instruments = [
-      ...BUILTIN_INSTRUMENTS.slice(0, song.header.defaultInstruments),
+      ...this.builtinInstruments.slice(0, song.header.defaultInstruments),
       ...song.instruments,
     ];
     this.layers = buildPlayLayer(song);
