@@ -72,5 +72,3 @@ export class BrowserPlayer extends BasePlayer {
     sourceNode.connect(this.audioContext.destination);
   }
 }
-
-export default {};
