@@ -1,7 +1,6 @@
 {
   "extends": "../tsconfig.base",
   "include": ["./src/**/*"],
-  "exclude": ["./src/static/**/*"],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Node",

@@ -8,8 +8,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c",
-    "clean": "rimraf ./dist && rimraf ./.rollup.cache && rimraf ./tsconfig.tsbuildinfo"
+    "build": "rollup -c && rimraf ./dist/dts-tmp && node -e \"require('fs').writeFileSync('./dist/index.d.ts', 'import * as m from \\'./bundle\\';\\ndeclare global {\\n    var nbsPlay = m;\\n}')\"",
+    "clean": "rimraf ./dist"
   },
   "keywords": [
     "nbs",
@@ -17,7 +17,11 @@
     "minecraft"
   ],
   "author": "student_2333 <lgc2333@126.com> (https://lgc2333.top)",
-  "repository": "github:lgc2333/nbs-play",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lgc2333/nbs-play",
+    "directory": "packages/nbs-play-browser"
+  },
   "license": "MIT",
   "funding": "https://afdian.net/a/lgc2333",
   "dependencies": {
@@ -28,6 +32,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.5",
     "rollup": "^4.9.1",
+    "rollup-plugin-dts": "^6.1.0",
     "tslib": "^2.6.2"
   }
 }

@@ -8,10 +8,10 @@ export class BrowserPlayer extends BasePlayer {
   /** 已加载音色音效数据，index 与 {@link BasePlayer.instruments} 对应 */
   public loadedInstruments: (AudioBuffer | undefined)[] = [];
 
-  public audioContext: AudioContext;
-
   /** 音量，范围应为 `0` ~ `1` */
-  public volumeMultiplier = 1;
+  public volumeMultiplier = 0.8;
+
+  public audioContext: AudioContext;
 
   constructor(song: ISong, soundPath: string) {
     super(song);
@@ -44,11 +44,11 @@ export class BrowserPlayer extends BasePlayer {
     );
   }
 
-  protected async prepare(): Promise<void> {
+  protected override async prepare(): Promise<void> {
     await this.loadInstrumentSound();
   }
 
-  async playNote(note: IPlayNote): Promise<void> {
+  override async playNote(note: IPlayNote): Promise<void> {
     const audio = this.loadedInstruments[note.instrument];
     if (!audio) return;
 

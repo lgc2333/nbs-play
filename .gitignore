@@ -2,4 +2,6 @@ node_modules
 dist
 tsconfig.tsbuildinfo
 
+.rollup.cache
+
 /test/**/*.ts

@@ -21,11 +21,9 @@ export class Parser {
   public async parse(): Promise<ISong> {
     const header = await this.parseHeader();
     const { version, songLayers } = header;
-    const [notes, layers, instruments] = await Promise.all([
-      arrFromAsync(this.parseNotes(version)),
-      arrFromAsync(this.parseLayers(songLayers, version)),
-      arrFromAsync(this.parseInstruments()),
-    ]);
+    const notes = await arrFromAsync(this.parseNotes(version));
+    const layers = await arrFromAsync(this.parseLayers(songLayers, version));
+    const instruments = await arrFromAsync(this.parseInstruments());
     this.offset = 0x0;
     return { header, notes, layers, instruments };
   }

@@ -6,7 +6,8 @@
     "moduleResolution": "Node",
     "rootDir": "./src",
     "outDir": "./dist",
-    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
-    "noEmit": true
+    "noEmit": true,
+    "composite": false,
+    "incremental": false
   }
 }
