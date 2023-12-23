@@ -90,8 +90,11 @@ export abstract class BasePlayer extends EventTarget {
   /** 准备好的 note 播放参数列表，index 与 tick 对应 */
   public readonly playNotes: TPlayNoteLayer[];
 
-  /** 已播放的 tick 数 */
-  public playedTicks = 0;
+  /** 已播放的 tick 数，内部计数用，不暴露 */
+  protected playedTicksCounter = 0;
+
+  /** 已播放的 note 数，内部计数用，不暴露 */
+  protected playedNotesCounter = 0;
 
   /** 播放任务 */
   protected playTask?: NodeJS.Timeout | number;
@@ -109,9 +112,24 @@ export abstract class BasePlayer extends EventTarget {
     return this.song.header.songLength + 1;
   }
 
+  /** 歌曲 note 数 */
+  public get noteLength() {
+    return this.song.notes.length;
+  }
+
   /** 是否已播放到结尾 */
   public get ended() {
-    return this.playedTicks >= this.length;
+    return this.playedTicksCounter >= this.length;
+  }
+
+  /** 已播放的 tick 数 */
+  public get playedTicks() {
+    return this.playedTicksCounter;
+  }
+
+  /** 已播放的 note 数 */
+  public get playedNotes() {
+    return this.playedNotesCounter;
   }
 
   constructor(public readonly song: ISong) {
@@ -154,27 +172,35 @@ export abstract class BasePlayer extends EventTarget {
     return notes;
   }
 
+  /** 获取指定 tick 区间的 note */
+  protected getNotesBetween(
+    start: number,
+    end: number
+  ): IPlayNote[] | undefined {
+    if (start === end && start > 0) return undefined;
+    return this.playNotes
+      .slice(start, end)
+      .filter((v) => v)
+      .flat() as IPlayNote[];
+  }
+
   /** 根据已经过的时间自增已播放的 tick 数 */
   protected tick(): number {
     const now = Date.now();
     const delta = now - this.lastTickTime;
     this.lastTickTime = now;
     const passedTicks = (delta * this.song.header.tempo) / 1000;
-    this.playedTicks += passedTicks;
+    this.playedTicksCounter += passedTicks;
     this.dispatchEvent(new PlayerEvent('tick', { passedTicks }));
     return passedTicks;
   }
 
   /** 执行 {@link BasePlayer.tick} 后返回当前需要播放的 note 列表 */
   protected tickNotes(): IPlayNote[] | undefined {
-    const lastTick = Math.ceil(this.playedTicks);
+    const lastTick = Math.ceil(this.playedTicksCounter);
     this.tick();
-    const currentTick = Math.ceil(this.playedTicks);
-    if (lastTick === currentTick && lastTick > 0) return undefined;
-    return this.playNotes
-      .slice(lastTick, currentTick)
-      .filter((v) => v)
-      .flat() as IPlayNote[];
+    const currentTick = Math.ceil(this.playedTicksCounter);
+    return this.getNotesBetween(lastTick, currentTick);
   }
 
   /** 执行 {@link BasePlayer.tickNotes} 后执行播放 */
@@ -186,6 +212,7 @@ export abstract class BasePlayer extends EventTarget {
     const notes = this.tickNotes();
     if (notes) {
       await Promise.all(notes.map((note) => this.playNote.bind(this)(note)));
+      this.playedNotesCounter += notes.length;
     }
     if (this.ended) {
       await this.stopPlay('ended');
@@ -228,7 +255,8 @@ export abstract class BasePlayer extends EventTarget {
 
   /** 调整播放进度 */
   public async seek(tick: number) {
-    this.playedTicks = tick;
+    this.playedTicksCounter = tick;
+    this.playedNotesCounter = this.getNotesBetween(0, tick)?.length || 0;
   }
 
   /** 继续播放 */
@@ -239,7 +267,7 @@ export abstract class BasePlayer extends EventTarget {
 
   /** 开始播放 */
   public async start() {
-    this.playedTicks = 0;
+    this.playedTicksCounter = 0;
     await this.startPlay('start');
   }
 
@@ -251,7 +279,7 @@ export abstract class BasePlayer extends EventTarget {
   /** 停止播放 */
   public async stop() {
     await this.stopPlay('stop');
-    this.playedTicks = 0;
+    this.playedTicksCounter = 0;
   }
 
   public addEventListener(
