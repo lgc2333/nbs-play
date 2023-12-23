@@ -37,7 +37,7 @@ export class BrowserPlayer extends BasePlayer {
     await Promise.all(
       this.instruments.map(async (instrument, i) => {
         const audioBuffer = await this.fetchAudioBuffer(
-          `${this.soundPath}/${instrument.file}`
+          `${this.soundPath}${instrument.file}`
         );
         this.loadedInstruments[i] = audioBuffer;
       })
