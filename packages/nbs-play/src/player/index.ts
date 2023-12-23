@@ -60,12 +60,7 @@ export class PlayerEvent<T = {}> extends Event {
 }
 
 export type TPlayerTickEvent = PlayerEvent<{ passedTicks: number }>;
-export type TPlayerPlayEvent = PlayerEvent<{
-  triggerType?: 'resume' | 'start';
-}>;
-export type TPlayerStopEvent = PlayerEvent<{
-  triggerType?: 'pause' | 'stop' | 'ended';
-}>;
+export type TPlayerPlayOrStopEvent = PlayerEvent<{ resetProgress: boolean }>;
 
 export interface IEventListener<TE extends Event = Event> {
   (evt: TE): void;
@@ -215,7 +210,7 @@ export abstract class BasePlayer extends EventTarget {
       this.playedNotesCounter += notes.length;
     }
     if (this.ended) {
-      await this.stopPlay('ended');
+      await this.stopPlay(false);
     }
   }
 
@@ -237,64 +232,40 @@ export abstract class BasePlayer extends EventTarget {
     this.playTask = undefined;
   }
 
-  /** 开始或继续播放，给 public 方法调用 */
-  protected async startPlay(triggerType?: string) {
+  /** 开始或继续播放 */
+  public async startPlay(resetProgress: boolean = true) {
     if (this.playing) throw new Error('Already playing');
+    if (resetProgress || this.ended) await this.seek(0);
     await this.prepare();
     this.lastTickTime = Date.now();
     await this.startPlayTask();
-    this.dispatchEvent(new PlayerEvent('play', { triggerType }));
+    this.dispatchEvent(new PlayerEvent('play', { resetProgress }));
   }
 
-  /** 暂停或停止播放，给 public 方法调用 */
-  protected async stopPlay(triggerType?: string) {
+  /** 暂停或停止播放 */
+  public async stopPlay(resetProgress: boolean = true) {
     if (!this.playing) throw new Error('Not playing');
     await this.stopPlayTask();
-    this.dispatchEvent(new PlayerEvent('stop', { triggerType }));
+    if (resetProgress) this.seek(0);
+    this.dispatchEvent(new PlayerEvent('stop', { resetProgress }));
   }
 
   /** 调整播放进度 */
   public async seek(tick: number) {
     this.playedTicksCounter = tick;
-    this.playedNotesCounter = this.getNotesBetween(0, tick)?.length || 0;
+    this.playedNotesCounter = tick
+      ? this.getNotesBetween(0, tick)?.length || 0
+      : 0;
   }
 
-  /** 继续播放 */
-  public async resume() {
-    if (this.ended) throw new Error('Already ended');
-    await this.startPlay('resume');
-  }
-
-  /** 开始播放 */
-  public async start() {
-    this.playedTicksCounter = 0;
-    await this.startPlay('start');
-  }
-
-  /** 暂停播放 */
-  public async pause() {
-    await this.stopPlay('pause');
-  }
-
-  /** 停止播放 */
-  public async stop() {
-    await this.stopPlay('stop');
-    this.playedTicksCounter = 0;
-  }
-
+  public addEventListener(
+    type: 'play' | 'stop',
+    callback: TEvListenerFuncOrObj<TPlayerPlayOrStopEvent> | null,
+    options?: boolean | AddEventListenerOptions | undefined
+  ): void;
   public addEventListener(
     type: 'tick',
     callback: TEvListenerFuncOrObj<TPlayerTickEvent> | null,
-    options?: boolean | AddEventListenerOptions | undefined
-  ): void;
-  public addEventListener(
-    type: 'play',
-    callback: TEvListenerFuncOrObj<TPlayerPlayEvent> | null,
-    options?: boolean | AddEventListenerOptions | undefined
-  ): void;
-  public addEventListener(
-    type: 'stop',
-    callback: TEvListenerFuncOrObj<TPlayerStopEvent> | null,
     options?: boolean | AddEventListenerOptions | undefined
   ): void;
   public addEventListener(
