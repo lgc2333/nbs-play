@@ -2,6 +2,7 @@
   "name": "nbs-play",
   "version": "0.1.0",
   "description": "The base library for playing nbs files",
+  "type": "module",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
   "files": [

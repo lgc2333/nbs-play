@@ -1,64 +1,75 @@
 import { BasePlayer, IPlayNote, ISong } from 'nbs-play';
 
-const audioContext = new AudioContext();
-const audioDestination = audioContext.createGain();
-audioDestination.connect(audioContext.destination);
-
-async function fetchAudioBuffer(
-  path: string
-): Promise<AudioBuffer | undefined> {
-  try {
-    const response = await fetch(path);
-    const arrayBuffer = await response.arrayBuffer();
-    return await audioContext.decodeAudioData(arrayBuffer);
-  } catch (e) {
-    console.error(`Failed to load audio ${path}`, e);
-  }
-  return undefined;
-}
-
+/** 浏览器 NBS 播放器实现 */
 export class BrowserPlayer extends BasePlayer {
-  loadedInstruments: (AudioBuffer | undefined)[] = [];
+  /** 音色音效文件基路径 */
+  public soundPath: string;
 
-  constructor(song: ISong, public soundPath: string) {
+  /** 已加载音色音效数据，index 与 {@link BasePlayer.instruments} 对应 */
+  public loadedInstruments: (AudioBuffer | undefined)[] = [];
+
+  public audioContext: AudioContext;
+
+  /** 音量，范围应为 `0` ~ `1` */
+  public volumeMultiplier = 1;
+
+  constructor(song: ISong, soundPath: string) {
     super(song);
+    this.soundPath = soundPath.endsWith('/') ? soundPath : `${soundPath}/`;
+    this.audioContext = new AudioContext();
   }
 
-  protected async loadAudio(): Promise<void> {
-    const promises = this.instruments.map(async (instrument, i) => {
-      const audioBuffer = await fetchAudioBuffer(
-        `${this.soundPath}/${instrument.file}`
-      );
-      this.loadedInstruments[i] = audioBuffer;
-    });
-    await Promise.all(promises);
+  /** 从给定 URL 获取 AudioBuffer */
+  async fetchAudioBuffer(path: string): Promise<AudioBuffer | undefined> {
+    try {
+      const response = await fetch(path);
+      const arrayBuffer = await response.arrayBuffer();
+      return await this.audioContext.decodeAudioData(arrayBuffer);
+    } catch (e) {
+      console.error(`Failed to fetch audio ${path}`);
+      console.error(e);
+    }
+    return undefined;
+  }
+
+  /** 加载音色音效数据 */
+  async loadInstrumentSound(): Promise<void> {
+    await Promise.all(
+      this.instruments.map(async (instrument, i) => {
+        const audioBuffer = await this.fetchAudioBuffer(
+          `${this.soundPath}/${instrument.file}`
+        );
+        this.loadedInstruments[i] = audioBuffer;
+      })
+    );
   }
 
   protected async prepare(): Promise<void> {
-    await this.loadAudio();
+    await this.loadInstrumentSound();
   }
 
-  protected async playNote(note: IPlayNote): Promise<void> {
+  async playNote(note: IPlayNote): Promise<void> {
     const audio = this.loadedInstruments[note.instrument];
     if (!audio) return;
 
-    const source = audioContext.createBufferSource();
-    source.buffer = audio;
-    source.start(0);
-    source.playbackRate.value = note.pitch;
+    let sourceNode: AudioNode;
+    const bufferSource = this.audioContext.createBufferSource();
+    bufferSource.buffer = audio;
+    bufferSource.start(0);
+    bufferSource.playbackRate.value = note.pitch;
+    sourceNode = bufferSource;
 
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = note.velocity / 2 / 100; // Decrease volume to avoid peaking
-    source.connect(gainNode);
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = (note.velocity / 100) * this.volumeMultiplier; // Decrease volume to avoid peaking
+    sourceNode = bufferSource.connect(gainNode);
 
     if (note.panning) {
-      const panningNode = audioContext.createStereoPanner();
+      const panningNode = this.audioContext.createStereoPanner();
       panningNode.pan.value = note.panning / 100;
-      gainNode.connect(panningNode);
-      panningNode.connect(audioDestination);
-    } else {
-      gainNode.connect(audioDestination);
+      sourceNode = gainNode.connect(panningNode);
     }
+
+    sourceNode.connect(this.audioContext.destination);
   }
 }
 

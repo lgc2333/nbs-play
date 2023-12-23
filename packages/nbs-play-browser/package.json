@@ -2,15 +2,14 @@
   "name": "nbs-play-browser",
   "version": "0.1.0",
   "description": "Play NBS files with web browser",
-  "main": "./dist/index.js",
+  "browser": "./dist/index.js",
   "typings": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "clean": "rimraf ./dist && rimraf ./tsconfig.tsbuildinfo"
+    "build": "rollup -c",
+    "clean": "rimraf ./dist && rimraf ./.rollup.cache && rimraf ./tsconfig.tsbuildinfo"
   },
   "keywords": [
     "nbs",
@@ -23,5 +22,12 @@
   "funding": "https://afdian.net/a/lgc2333",
   "dependencies": {
     "nbs-play": "workspace:^"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "rollup": "^4.9.1",
+    "tslib": "^2.6.2"
   }
 }

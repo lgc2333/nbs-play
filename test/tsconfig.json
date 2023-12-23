@@ -1,9 +1,10 @@
 {
   "extends": "../tsconfig.base",
   "include": ["./src/**/*"],
+  "exclude": ["./src/static/**/*"],
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "./tsconfig.tsbuildinfo"

@@ -6,6 +6,7 @@
     "moduleResolution": "Node",
     "rootDir": "./src",
     "outDir": "./dist",
-    "tsBuildInfoFile": "./tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "./tsconfig.tsbuildinfo",
+    "noEmit": true
   }
 }

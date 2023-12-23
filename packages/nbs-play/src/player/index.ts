@@ -6,18 +6,21 @@ import {
   buildInstrument,
 } from '../parser/index.js';
 
-export interface IPlayLayer {
-  layer: ILayer;
-  notes: (INote | undefined)[];
-}
-
+/** note 播放参数 */
 export interface IPlayNote {
+  /** 乐器 id，与 {@link BasePlayer.instruments} 的 index 对应 */
   instrument: number;
+  /** 音量，范围 `0` ~ `100` */
   velocity: number;
+  /** 立体声位置，范围 `-100` ~ `100` */
   panning: number;
+  /** 音调，`1` 为不变调 */
   pitch: number;
 }
 
+export type TPlayNoteLayer = IPlayNote[] | undefined;
+
+/** 默认内置的音色列表 */
 export const BUILTIN_INSTRUMENTS: IInstrument[] = [
   buildInstrument({ id: 0, name: 'Harp', file: 'harp.ogg' }),
   buildInstrument({ id: 1, name: 'Double Bass', file: 'dbass.ogg' }),
@@ -41,48 +44,52 @@ export const BUILTIN_INSTRUMENTS: IInstrument[] = [
   buildInstrument({ id: 15, name: 'Pling', file: 'pling.ogg' }),
 ];
 
-export function buildPlayLayer(song: ISong): IPlayLayer[] {
-  const playLayers: IPlayLayer[] = song.layers.map(
-    (layer): IPlayLayer => ({
-      layer,
-      notes: new Array(song.header.songLength + 1).fill(undefined),
-    })
-  );
-  for (let i = 0; i < song.notes.length; i += 1) {
-    const note = song.notes[i];
-    const layer = playLayers[note.layer];
-    layer.notes[note.tick] = note;
+export class PlayerEvent<T = {}> extends Event {
+  /** 事件额外参数 */
+  readonly params: T;
+
+  constructor(type: string, eventInitDict?: EventInit & T) {
+    const { bubbles, cancelable, composed, ...rest } = eventInitDict || {};
+    super(type, { bubbles, cancelable, composed });
+    this.params = rest as T;
   }
-  return playLayers;
 }
 
-export class BasePlayer extends EventTarget {
-  readonly builtinInstruments = BUILTIN_INSTRUMENTS;
+export type PlayerTickEvent = PlayerEvent<{ passedTicks: number }>;
 
-  readonly instruments: IInstrument[];
+/** NBS 播放器基类 */
+export abstract class BasePlayer extends EventTarget {
+  /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
+  public readonly builtinInstruments = BUILTIN_INSTRUMENTS;
 
-  readonly layers: IPlayLayer[];
+  /** 乐器列表，index 与 {@link INote.instrument} 对应 */
+  public readonly instruments: IInstrument[];
 
-  playedTicks = 0;
+  /** 准备好的 note 播放参数列表，index 与 tick 对应 */
+  public readonly playNotes: TPlayNoteLayer[];
 
-  protected playTask?: any;
+  /** 已播放的 tick 数 */
+  public playedTicks = 0;
 
+  /** 播放任务 */
+  protected playTask?: NodeJS.Timeout | number;
+
+  /** 上一次执行 {@link BasePlayer.tick} 的时间 */
   protected lastTickTime = 0;
 
-  get task() {
-    return this.playTask;
-  }
-
-  get playing() {
+  /** 是否正在播放 */
+  public get playing() {
     return !!this.playTask;
   }
 
-  get ended() {
-    return this.playedTicks >= this.length;
+  /** 歌曲长度 (tick) */
+  public get length() {
+    return this.song.header.songLength + 1;
   }
 
-  get length() {
-    return this.song.header.songLength + 1;
+  /** 是否已播放到结尾 */
+  public get ended() {
+    return this.playedTicks >= this.length;
   }
 
   constructor(public readonly song: ISong) {
@@ -91,40 +98,11 @@ export class BasePlayer extends EventTarget {
       ...this.builtinInstruments.slice(0, song.header.defaultInstruments),
       ...song.instruments,
     ];
-    this.layers = buildPlayLayer(song);
+    this.playNotes = this.buildPlayNotes(song);
   }
 
-  public tick(): number {
-    const now = Date.now();
-    const delta = now - this.lastTickTime;
-    this.lastTickTime = now;
-    const passedTicks = (delta * this.song.header.tempo) / 1000;
-    this.playedTicks += passedTicks;
-    this.dispatchEvent(new Event('tick'));
-    return passedTicks;
-  }
-
-  protected tickNotes(): IPlayNote[] {
-    const lastTick = Math.ceil(this.playedTicks);
-    this.tick();
-    const currentTick = Math.ceil(this.playedTicks);
-    if (lastTick === currentTick) return [];
-    return this.layers.flatMap((layer) =>
-      layer.notes
-        .slice(lastTick, currentTick)
-        .filter((note) => note)
-        .map((note) => this.buildPlayNote(layer.layer, note!))
-    );
-  }
-
-  protected async tickPlay() {
-    await Promise.all(
-      this.tickNotes().map((note) => this.playNote.bind(this)(note))
-    );
-    if (!this.playTask || this.ended) this.stopPlay();
-  }
-
-  protected buildPlayNote(layer: ILayer, note: INote): IPlayNote {
+  /** 构建单个 {@link IPlayNote} */
+  protected buildSinglePlayNote(layer: ILayer, note: INote): IPlayNote {
     const finalPanning = (note.panning + layer.panning) / 2;
     const finalKey =
       note.key +
@@ -139,48 +117,118 @@ export class BasePlayer extends EventTarget {
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, class-methods-use-this
-  protected async playNote(note: IPlayNote) {
-    throw new Error('Not implemented');
+  /** 构建 {@link IPlayNote} 列表 */
+  protected buildPlayNotes(song: ISong): TPlayNoteLayer[] {
+    const notes: TPlayNoteLayer[] = new Array(song.header.songLayers).fill(
+      undefined
+    );
+    for (let i = 0; i < song.notes.length; i += 1) {
+      const note = song.notes[i];
+      const { tick } = note;
+      const layer = this.song.layers[note.layer];
+      if (notes[tick] === undefined) notes[tick] = [];
+      notes[tick]!.push(this.buildSinglePlayNote(layer, note));
+    }
+    return notes;
   }
 
-  // eslint-disable-next-line class-methods-use-this
-  protected async prepare(): Promise<any> {}
-
-  protected async startTask() {
-    if (this.playTask) return;
-    await this.prepare();
-    this.lastTickTime = Date.now();
-    this.playTask = setInterval(this.tickPlay.bind(this), 1);
-    this.dispatchEvent(new Event('play'));
+  /** 根据已经过的时间自增已播放的 tick 数 */
+  protected tick(): number {
+    const now = Date.now();
+    const delta = now - this.lastTickTime;
+    this.lastTickTime = now;
+    const passedTicks = (delta * this.song.header.tempo) / 1000;
+    this.playedTicks += passedTicks;
+    this.dispatchEvent(new PlayerEvent('tick', { passedTicks }));
+    return passedTicks;
   }
 
-  protected stopTask() {
-    if (this.playTask) {
-      clearInterval(this.playTask);
-      this.playTask = undefined;
+  /** 执行 {@link BasePlayer.tick} 后返回当前需要播放的 note 列表 */
+  protected tickNotes(): IPlayNote[] | undefined {
+    const lastTick = Math.ceil(this.playedTicks);
+    this.tick();
+    const currentTick = Math.ceil(this.playedTicks);
+    if (lastTick === currentTick && lastTick > 0) return undefined;
+    return this.playNotes
+      .slice(lastTick, currentTick)
+      .filter((v) => v)
+      .flat() as IPlayNote[];
+  }
+
+  /** 执行 {@link BasePlayer.tickNotes} 后执行播放 */
+  protected async tickPlay() {
+    if (!this.playing) {
+      await this.stopPlay();
+      return;
+    }
+    const notes = this.tickNotes();
+    if (notes) {
+      await Promise.all(notes.map((note) => this.playNote.bind(this)(note)));
+    }
+    if (this.ended) {
+      await this.stopPlay();
     }
   }
 
-  public resumePlay() {
-    this.startTask();
+  /** 播放单个 note */
+  public abstract playNote(note: IPlayNote): Promise<any>;
+
+  /** 播放前的准备工作 */
+  // eslint-disable-next-line class-methods-use-this
+  protected async prepare(): Promise<any> {}
+
+  /** 启动播放任务，单独出来是为了方便继承类修改逻辑 */
+  protected async startPlayTask() {
+    this.playTask = setInterval(this.tickPlay.bind(this), 1);
   }
 
-  public startPlay() {
+  /** 停止播放任务，单独出来是为了方便继承类修改逻辑 */
+  protected async stopPlayTask() {
+    clearInterval(this.playTask);
+    this.playTask = undefined;
+  }
+
+  /** 开始或继续播放，给 public 方法调用 */
+  protected async startPlay() {
+    if (this.playing) throw new Error('Already playing');
+    await this.prepare();
+    this.lastTickTime = Date.now();
+    await this.startPlayTask();
+    this.dispatchEvent(new PlayerEvent('start'));
+  }
+
+  /** 暂停或停止播放，给 public 方法调用 */
+  protected async stopPlay() {
+    if (!this.playing) throw new Error('Not playing');
+    await this.stopPlayTask();
+    this.dispatchEvent(new PlayerEvent('stop'));
+  }
+
+  /** 调整播放进度 */
+  public async seek(tick: number) {
+    this.playedTicks = tick;
+  }
+
+  /** 继续播放 */
+  public async resume() {
+    if (this.ended) throw new Error('Already ended');
+    await this.startPlay();
+  }
+
+  /** 开始播放 */
+  public async start() {
     this.playedTicks = 0;
-    this.startTask();
+    await this.startPlay();
   }
 
-  public pausePlay() {
-    this.stopTask();
-    this.dispatchEvent(new Event('stop'));
+  /** 暂停播放 */
+  public async pause() {
+    await this.stopPlay();
   }
 
-  public stopPlay() {
-    this.stopTask();
+  /** 停止播放 */
+  public async stop() {
+    await this.stopPlay();
     this.playedTicks = 0;
-    this.dispatchEvent(new Event('stop'));
   }
 }
-
-export default {};

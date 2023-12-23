@@ -1,22 +1,33 @@
 import { IHeader, IInstrument, ILayer, INote, ISong } from './types.js';
 
+export async function arrFromAsync<T>(
+  iterable: AsyncIterable<T>
+): Promise<T[]> {
+  const arr: T[] = [];
+  for await (const item of iterable) arr.push(item);
+  return arr;
+}
+
+/** NBS 文件解析器 */
 export class Parser {
   protected view: DataView;
 
   protected offset = 0x0;
 
-  constructor(protected file: ArrayBuffer) {
-    this.view = new DataView(file);
+  constructor(protected buf: ArrayBuffer) {
+    this.view = new DataView(buf);
   }
 
-  async parse(): Promise<ISong> {
-    const header = this.parseHeader();
-    return {
-      header,
-      notes: [...this.parseNotes(header.version)],
-      layers: [...this.parseLayers(header.songLayers, header.version)],
-      instruments: [...this.parseInstruments()],
-    };
+  public async parse(): Promise<ISong> {
+    const header = await this.parseHeader();
+    const { version, songLayers } = header;
+    const [notes, layers, instruments] = await Promise.all([
+      arrFromAsync(this.parseNotes(version)),
+      arrFromAsync(this.parseLayers(songLayers, version)),
+      arrFromAsync(this.parseInstruments()),
+    ]);
+    this.offset = 0x0;
+    return { header, notes, layers, instruments };
   }
 
   protected readUChar(): number {
@@ -46,13 +57,13 @@ export class Parser {
   protected readString(): string {
     const length = this.readUInt();
     const value = new TextDecoder('cp1252').decode(
-      this.file.slice(this.offset, this.offset + length)
+      this.buf.slice(this.offset, this.offset + length)
     );
     this.offset += length;
     return value;
   }
 
-  protected parseHeader(): IHeader {
+  protected async parseHeader(): Promise<IHeader> {
     const songLength = this.readUShort();
     const version = songLength === 0 ? this.readUChar() : 0;
     return {
@@ -80,7 +91,7 @@ export class Parser {
     };
   }
 
-  protected *jump(): Generator<number> {
+  protected async *jump(): AsyncGenerator<number> {
     let value = -1;
     for (;;) {
       const jump = this.readUShort();
@@ -90,9 +101,9 @@ export class Parser {
     }
   }
 
-  protected *parseNotes(version: number): Generator<INote> {
-    for (const currentTick of this.jump()) {
-      for (const currentLayer of this.jump()) {
+  protected async *parseNotes(version: number): AsyncGenerator<INote> {
+    for await (const currentTick of this.jump()) {
+      for await (const currentLayer of this.jump()) {
         yield {
           tick: currentTick,
           layer: currentLayer,
@@ -106,10 +117,10 @@ export class Parser {
     }
   }
 
-  protected *parseLayers(
+  protected async *parseLayers(
     layerCount: number,
     version: number
-  ): Generator<ILayer> {
+  ): AsyncGenerator<ILayer> {
     for (let id = 0; id < layerCount; id += 1) {
       yield {
         id,
@@ -121,7 +132,7 @@ export class Parser {
     }
   }
 
-  protected *parseInstruments(): Generator<IInstrument> {
+  protected async *parseInstruments(): AsyncGenerator<IInstrument> {
     const len = this.readUChar();
     for (let id = 0; id < len; id += 1) {
       yield {
@@ -133,4 +144,8 @@ export class Parser {
       };
     }
   }
+}
+
+export async function parse(buf: ArrayBuffer): Promise<ISong> {
+  return new Parser(buf).parse();
 }
