@@ -1,10 +1,4 @@
-import {
-  IInstrument,
-  ILayer,
-  INote,
-  ISong,
-  buildInstrument,
-} from '../parser/index.js';
+import { IInstrument, ILayer, INote, ISong, buildInstrument } from './types.js';
 
 /** note 播放参数 */
 export interface IPlayNote {

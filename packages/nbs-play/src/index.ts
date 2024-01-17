@@ -1,2 +1,3 @@
-export * from './parser/index.js';
-export * from './player/index.js';
+export * from './parser.js';
+export * from './player.js';
+export * from './types.js';
