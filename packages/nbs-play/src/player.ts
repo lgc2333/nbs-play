@@ -1,3 +1,4 @@
+import { PlayerEvent, PlayerEventTarget } from './event.js';
 import { IInstrument, ILayer, INote, ISong, buildInstrument } from './types.js';
 
 /** note 播放参数 */
@@ -38,38 +39,21 @@ export const BUILTIN_INSTRUMENTS: IInstrument[] = [
   buildInstrument({ id: 15, name: 'Pling', file: 'pling.ogg' }),
 ];
 
-export class PlayerEvent<T = {}> extends Event {
-  currentTarget!: BasePlayer | null;
-
-  target!: BasePlayer | null;
-
-  /** 事件额外参数 */
-  readonly params: T;
-
-  constructor(type: string, eventInitDict?: EventInit & T) {
-    const { bubbles, cancelable, composed, ...rest } = eventInitDict || {};
-    super(type, { bubbles, cancelable, composed });
-    this.params = rest as T;
-  }
-}
-
-export type TPlayerTickEvent = PlayerEvent<{ passedTicks: number }>;
-export type TPlayerPlayOrStopEvent = PlayerEvent<{ resetProgress: boolean }>;
-
-export interface IEventListener<TE extends Event = Event> {
-  (evt: TE): void;
-}
-
-export interface IEventListenerObject<TE extends Event = Event> {
-  handleEvent(object: TE): void;
-}
-
-export type TEvListenerFuncOrObj<TE extends Event = Event> =
-  | IEventListener<TE>
-  | IEventListenerObject<TE>;
+export type TPlayerTickEvent = PlayerEvent<BasePlayer, { passedTicks: number }>;
+export type TPlayerPlayOrStopEvent = PlayerEvent<
+  BasePlayer,
+  { resetProgress: boolean }
+>;
 
 /** NBS 播放器基类 */
-export abstract class BasePlayer extends EventTarget {
+export abstract class BasePlayer extends PlayerEventTarget<
+  BasePlayer,
+  {
+    tick: TPlayerTickEvent;
+    play: TPlayerPlayOrStopEvent;
+    stop: TPlayerPlayOrStopEvent;
+  }
+> {
   /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
   public readonly builtinInstruments = BUILTIN_INSTRUMENTS;
 
@@ -244,29 +228,27 @@ export abstract class BasePlayer extends EventTarget {
     this.dispatchEvent(new PlayerEvent('stop', { resetProgress }));
   }
 
+  public async play() {
+    await this.startPlay();
+  }
+
+  public async resume() {
+    await this.startPlay(false);
+  }
+
+  public async stop() {
+    await this.stopPlay();
+  }
+
+  public async pause() {
+    await this.stopPlay(false);
+  }
+
   /** 调整播放进度 */
   public async seek(tick: number) {
     this.playedTicksCounter = tick;
     this.playedNotesCounter = tick
       ? this.getNotesBetween(0, tick)?.length || 0
       : 0;
-  }
-
-  public addEventListener(
-    type: 'play' | 'stop',
-    callback: TEvListenerFuncOrObj<TPlayerPlayOrStopEvent> | null,
-    options?: boolean | AddEventListenerOptions | undefined
-  ): void;
-  public addEventListener(
-    type: 'tick',
-    callback: TEvListenerFuncOrObj<TPlayerTickEvent> | null,
-    options?: boolean | AddEventListenerOptions | undefined
-  ): void;
-  public addEventListener(
-    type: string,
-    callback: TEvListenerFuncOrObj | null,
-    options?: boolean | AddEventListenerOptions | undefined
-  ): void {
-    super.addEventListener(type, callback, options);
   }
 }
