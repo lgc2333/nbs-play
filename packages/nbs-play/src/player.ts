@@ -45,14 +45,16 @@ export type TPlayerPlayOrStopEvent = PlayerEvent<
   { resetProgress: boolean }
 >;
 
+export type TPlayerEventMap = {
+  tick: TPlayerTickEvent;
+  play: TPlayerPlayOrStopEvent;
+  stop: TPlayerPlayOrStopEvent;
+};
+
 /** NBS 播放器基类 */
 export abstract class BasePlayer extends PlayerEventTarget<
   BasePlayer,
-  {
-    tick: TPlayerTickEvent;
-    play: TPlayerPlayOrStopEvent;
-    stop: TPlayerPlayOrStopEvent;
-  }
+  TPlayerEventMap
 > {
   /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
   public readonly builtinInstruments = BUILTIN_INSTRUMENTS;
