@@ -257,25 +257,22 @@ export abstract class BasePlaylist<
         };
       });
 
-      if (this.playing) {
-        if (this.loopType === LoopType.Single) {
-          this.playTask.then(this.flush.bind(this));
-        } else {
-          this.playTask.then(async () => {
-            try {
-              await this.next();
-            } catch (e) {
-              // no next
-              this.playing = false;
-              this.playingIndex = -1;
-              this.dispatchEvent(
-                new PlayerEvent('switch', { file: undefined })
-              );
-              this.dispatchEvent(new PlayerEvent('stop'));
-            }
-          });
-        }
+      if (!this.playing) return;
+      if (this.loopType === LoopType.Single) {
+        this.playTask.then(this.flush.bind(this));
+        return;
       }
+      this.playTask.then(async () => {
+        try {
+          await this.next();
+        } catch (e) {
+          // no next
+          this.playing = false;
+          this.playingIndex = -1;
+          this.dispatchEvent(new PlayerEvent('switch', { file: undefined }));
+          this.dispatchEvent(new PlayerEvent('stop'));
+        }
+      });
     });
   }
 
