@@ -15,7 +15,7 @@ export enum LoopType {
   /** 单曲循环 */
   Single,
   /** 随机播放 */
-  Random,
+  Shuffle,
 }
 
 export type TPlaylistEvent<F, P, E> = PlayerEvent<
@@ -78,15 +78,15 @@ export abstract class BasePlaylist<
 
   protected playingPlayer?: P;
 
-  protected randomizedList?: F[];
+  protected shuffledList?: F[];
 
   constructor(protected fileList: F[] = []) {
     super();
   }
 
   protected get currentPlaylist(): F[] {
-    return this.loopType === LoopType.Random
-      ? this.randomizedList ?? this.newRandomList()
+    return this.loopType === LoopType.Shuffle
+      ? this.shuffledList ?? this.newShuffledList()
       : this.fileList;
   }
 
@@ -123,7 +123,7 @@ export abstract class BasePlaylist<
 
     if (index < 0) this.fileList.push(file);
     else this.fileList.splice(index, 0, file);
-    this.newRandomList();
+    this.newShuffledList();
 
     this.playingIndex = this.currentPlaylist.indexOf(playingFile);
     this.dispatchEvent(
@@ -135,7 +135,7 @@ export abstract class BasePlaylist<
     const playingFile = this.getPlaying();
 
     this.fileList.splice(index, 1);
-    this.newRandomList();
+    this.newShuffledList();
 
     const newIndex = this.currentPlaylist.indexOf(playingFile);
     if (newIndex !== -1) this.playingIndex = newIndex;
@@ -159,17 +159,17 @@ export abstract class BasePlaylist<
 
   public async clear() {
     this.fileList = [];
-    this.randomizedList = undefined;
+    this.shuffledList = undefined;
     this.playingIndex = 0;
     if (this.playing) this.dispatchEvent(new PlayerEvent('stop'));
     await this.stopInner();
     this.dispatchEvent(new PlayerEvent('change', { list: [] }));
   }
 
-  public newRandomList() {
-    this.randomizedList = [...this.fileList];
-    this.randomizedList.sort(() => Math.random() - 0.5);
-    return this.randomizedList;
+  public newShuffledList() {
+    this.shuffledList = [...this.fileList];
+    this.shuffledList.sort(() => Math.random() - 0.5);
+    return this.shuffledList;
   }
 
   protected async switchNext() {
@@ -180,8 +180,8 @@ export abstract class BasePlaylist<
         case LoopType.List:
           this.playingIndex = 0;
           break;
-        case LoopType.Random:
-          this.newRandomList();
+        case LoopType.Shuffle:
+          this.newShuffledList();
           this.playingIndex = 0;
           break;
         default: // None
@@ -197,7 +197,7 @@ export abstract class BasePlaylist<
     if (this.playingIndex > 0) {
       this.playingIndex -= 1;
     } else if (
-      this.loopType === LoopType.Random ||
+      this.loopType === LoopType.Shuffle ||
       this.loopType === LoopType.List
     ) {
       this.playingIndex = this.length - 1;
@@ -284,8 +284,8 @@ export abstract class BasePlaylist<
     const oldLoopType = this.loopType;
     this.loopType = loopType;
     this.dispatchEvent(new PlayerEvent('loopChange', { loopType }));
-    if (loopType === LoopType.Random) {
-      this.newRandomList();
+    if (loopType === LoopType.Shuffle) {
+      this.newShuffledList();
       if (this.playingIndex !== -1)
         this.playingIndex = this.currentPlaylist.indexOf(
           this.fileList[this.playingIndex]
@@ -293,10 +293,10 @@ export abstract class BasePlaylist<
       this.dispatchEvent(
         new PlayerEvent('change', { list: this.currentPlaylist })
       );
-    } else if (oldLoopType === LoopType.Random) {
-      if (this.playingIndex !== -1 && this.randomizedList)
+    } else if (oldLoopType === LoopType.Shuffle) {
+      if (this.playingIndex !== -1 && this.shuffledList)
         this.playingIndex = this.currentPlaylist.indexOf(
-          this.randomizedList[this.playingIndex]
+          this.shuffledList[this.playingIndex]
         );
       this.dispatchEvent(
         new PlayerEvent('change', { list: this.currentPlaylist })
