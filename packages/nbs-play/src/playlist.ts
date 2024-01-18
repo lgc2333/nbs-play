@@ -78,12 +78,20 @@ export abstract class BasePlaylist<
 
   protected playingPlayer?: P;
 
-  constructor(protected files: F[] = []) {
+  protected randomizedList?: F[];
+
+  constructor(protected fileList: F[] = []) {
     super();
   }
 
+  protected get currentPlaylist(): F[] {
+    return this.loopType === LoopType.Random
+      ? this.randomizedList ?? this.newRandomList()
+      : this.fileList;
+  }
+
   public get length() {
-    return this.files.length;
+    return this.currentPlaylist.length;
   }
 
   public isPlaying() {
@@ -98,69 +106,70 @@ export abstract class BasePlaylist<
     return this.loopType;
   }
 
-  public getFileList(): readonly F[] {
-    return this.files;
-  }
-
   public getPlaying() {
-    return this.files[this.playingIndex];
+    return this.currentPlaylist[this.playingIndex];
   }
 
   public getPlayingPlayer() {
     return this.playingPlayer;
   }
 
-  protected async addFileInner(file: F, index = -1) {
-    if (index < 0) this.files.push(file);
-    else this.files.splice(index, 0, file);
-
-    if (this.playingIndex === index) await this.switchNext();
-    if (index >= 0 && this.playingIndex > index) this.playingIndex += 1;
+  public getPlaylist() {
+    return this.currentPlaylist;
   }
 
   public async addFile(file: F, index = -1) {
-    const oldIndex = this.playingIndex;
-    await this.addFileInner(file, index);
-    if (this.playing && oldIndex !== this.playingIndex) await this.flush();
-    this.dispatchEvent(new PlayerEvent('change', { list: this.files }));
-  }
+    const playingFile = this.getPlaying();
 
-  protected async removeFileInner(index: number) {
-    this.files.splice(index, 1);
+    if (index < 0) this.fileList.push(file);
+    else this.fileList.splice(index, 0, file);
+    this.newRandomList();
 
-    if (this.playingIndex === index) await this.switchNext();
-    if (this.playingIndex > index) this.playingIndex -= 1;
+    this.playingIndex = this.currentPlaylist.indexOf(playingFile);
+    this.dispatchEvent(
+      new PlayerEvent('change', { list: this.currentPlaylist })
+    );
   }
 
   public async removeFile(index: number) {
-    const oldIndex = this.playingIndex;
-    await this.removeFileInner(index);
-    if (this.playing && oldIndex !== this.playingIndex) await this.flush();
-    this.dispatchEvent(new PlayerEvent('change', { list: this.files }));
+    const playingFile = this.getPlaying();
+
+    this.fileList.splice(index, 1);
+    this.newRandomList();
+
+    const newIndex = this.currentPlaylist.indexOf(playingFile);
+    if (newIndex !== -1) this.playingIndex = newIndex;
+    else this.flush();
+    this.dispatchEvent(
+      new PlayerEvent('change', { list: this.currentPlaylist })
+    );
   }
 
   public async changeIndex(old: number, now: number) {
-    const oldIndex = this.playingIndex;
-    const oldFile = this.files[old];
-    await this.removeFileInner(old);
-    await this.addFileInner(oldFile, now);
-    if (this.playing && oldIndex !== this.playingIndex) await this.flush();
-    this.dispatchEvent(new PlayerEvent('change', { list: this.files }));
+    const playingFile = this.getPlaying();
+
+    this.currentPlaylist.splice(old, 1);
+    this.currentPlaylist.splice(now, 0, this.currentPlaylist[old]);
+
+    this.playingIndex = this.currentPlaylist.indexOf(playingFile);
+    this.dispatchEvent(
+      new PlayerEvent('change', { list: this.currentPlaylist })
+    );
   }
 
   public async clear() {
-    this.files = [];
+    this.fileList = [];
+    this.randomizedList = undefined;
     this.playingIndex = 0;
+    if (this.playing) this.dispatchEvent(new PlayerEvent('stop'));
     await this.stopInner();
-    this.dispatchEvent(new PlayerEvent('change', { list: this.files }));
+    this.dispatchEvent(new PlayerEvent('change', { list: [] }));
   }
 
-  public randomizeList() {
-    const playingFile = this.getPlaying();
-    this.files.sort(() => Math.random() - 0.5);
-    if (this.playingIndex !== -1)
-      this.playingIndex = this.files.indexOf(playingFile);
-    this.dispatchEvent(new PlayerEvent('change', { list: this.files }));
+  public newRandomList() {
+    this.randomizedList = [...this.fileList];
+    this.randomizedList.sort(() => Math.random() - 0.5);
+    return this.randomizedList;
   }
 
   protected async switchNext() {
@@ -172,7 +181,7 @@ export abstract class BasePlaylist<
           this.playingIndex = 0;
           break;
         case LoopType.Random:
-          this.randomizeList();
+          this.newRandomList();
           this.playingIndex = 0;
           break;
         default: // None
@@ -187,10 +196,10 @@ export abstract class BasePlaylist<
   protected async switchPrevious() {
     if (this.playingIndex > 0) {
       this.playingIndex -= 1;
-    } else if (this.loopType === LoopType.Random) {
-      this.randomizeList();
-      this.playingIndex = 0;
-    } else if (this.loopType === LoopType.List) {
+    } else if (
+      this.loopType === LoopType.Random ||
+      this.loopType === LoopType.List
+    ) {
       this.playingIndex = this.length - 1;
     } else {
       throw new Error('No previous');
@@ -210,7 +219,7 @@ export abstract class BasePlaylist<
     if (!this.length || this.playingIndex === -1) return;
     this.playTask.then(async () => {
       try {
-        const file = this.files[this.playingIndex];
+        const file = this.getPlaying();
         const song = await file.read();
         const player = await this.createPlayer(song);
         this.playingPlayer = player;
@@ -272,9 +281,27 @@ export abstract class BasePlaylist<
 
   public switchLoopType(loopType: LoopType) {
     if (this.loopType === loopType) return;
+    const oldLoopType = this.loopType;
     this.loopType = loopType;
     this.dispatchEvent(new PlayerEvent('loopChange', { loopType }));
-    if (loopType === LoopType.Random) this.randomizeList();
+    if (loopType === LoopType.Random) {
+      this.newRandomList();
+      if (this.playingIndex !== -1)
+        this.playingIndex = this.currentPlaylist.indexOf(
+          this.fileList[this.playingIndex]
+        );
+      this.dispatchEvent(
+        new PlayerEvent('change', { list: this.currentPlaylist })
+      );
+    } else if (oldLoopType === LoopType.Random) {
+      if (this.playingIndex !== -1 && this.randomizedList)
+        this.playingIndex = this.currentPlaylist.indexOf(
+          this.randomizedList[this.playingIndex]
+        );
+      this.dispatchEvent(
+        new PlayerEvent('change', { list: this.currentPlaylist })
+      );
+    }
   }
 
   public async play() {
