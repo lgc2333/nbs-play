@@ -1,5 +1,5 @@
 import { BasePlaylist, IPlaylistFile, ISong, parse } from 'nbs-play';
-import { BrowserPlayer } from './player';
+import { BrowserPlayer, BrowserPlayerOptions } from './player';
 
 export class BrowserPlaylistFile implements IPlaylistFile {
   constructor(
@@ -18,14 +18,16 @@ export class BrowserPlaylist extends BasePlaylist<
   BrowserPlaylistFile,
   BrowserPlayer
 > {
-  constructor(
-    files: BrowserPlaylistFile[] = [],
-    public soundPath: string = ''
-  ) {
-    super(files);
+  public soundPath: string;
+
+  constructor(fileList: BrowserPlaylistFile[], options?: BrowserPlayerOptions) {
+    super(fileList, options);
+    const { soundPath } = options || {};
+    if (!soundPath) throw new Error('soundPath is required');
+    this.soundPath = soundPath;
   }
 
   public override async createPlayer(song: ISong): Promise<BrowserPlayer> {
-    return new BrowserPlayer(song, this.soundPath);
+    return new BrowserPlayer(song, { soundPath: this.soundPath });
   }
 }

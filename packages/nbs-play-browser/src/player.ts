@@ -2,6 +2,10 @@ import { BasePlayer, IPlayNote, ISong } from 'nbs-play';
 
 export const audioContext = new AudioContext();
 
+export type BrowserPlayerOptions = {
+  soundPath: string;
+};
+
 /** 浏览器 NBS 播放器实现 */
 export class BrowserPlayer extends BasePlayer {
   /** 音色音效文件基路径 */
@@ -13,8 +17,10 @@ export class BrowserPlayer extends BasePlayer {
   /** 音量，范围应为 `0` ~ `1` */
   public volumeMultiplier = 0.8;
 
-  constructor(song: ISong, soundPath: string = '') {
-    super(song);
+  constructor(song: ISong, options?: BrowserPlayerOptions) {
+    super(song, options);
+    const { soundPath } = options || {};
+    if (!soundPath) throw new Error('soundPath is required');
     this.soundPath = soundPath.endsWith('/') ? soundPath : `${soundPath}/`;
   }
 

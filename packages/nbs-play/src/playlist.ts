@@ -80,7 +80,7 @@ export abstract class BasePlaylist<
 
   protected shuffledList?: F[];
 
-  constructor(protected fileList: F[] = []) {
+  constructor(protected fileList: F[] = [], options?: any) {
     super();
   }
 

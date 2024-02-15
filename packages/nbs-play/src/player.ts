@@ -56,9 +56,6 @@ export abstract class BasePlayer extends PlayerEventTarget<
   BasePlayer,
   TPlayerEventMap
 > {
-  /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
-  public readonly builtinInstruments = BUILTIN_INSTRUMENTS;
-
   /** 乐器列表，index 与 {@link INote.instrument} 对应 */
   public readonly instruments: IInstrument[];
 
@@ -72,10 +69,15 @@ export abstract class BasePlayer extends PlayerEventTarget<
   protected playedNotesCounter = 0;
 
   /** 播放任务 */
-  protected playTask?: NodeJS.Timeout | number;
+  protected playTask?: any;
 
   /** 上一次执行 {@link BasePlayer.tick} 的时间 */
   protected lastTickTime = 0;
+
+  /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
+  public get builtinInstruments() {
+    return BUILTIN_INSTRUMENTS;
+  }
 
   /** 是否正在播放 */
   public get playing() {
@@ -107,7 +109,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
     return this.playedNotesCounter;
   }
 
-  constructor(public readonly song: ISong) {
+  constructor(public readonly song: ISong, options?: any) {
     super();
     this.instruments = [
       ...this.builtinInstruments.slice(0, song.header.defaultInstruments),
