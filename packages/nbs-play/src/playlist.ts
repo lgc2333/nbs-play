@@ -66,9 +66,11 @@ export abstract class BasePlaylist<
 > extends PlayerEventTarget<BasePlaylist<F, P>, TPlaylistEventMap<F, P>> {
   protected loopType: LoopType = LoopType.List;
 
-  protected playing = false;
+  /** 是否正在播放，内部用 */
+  protected isPlaying = false;
 
-  protected pausing = false;
+  /** 是否正在暂停，内部用 */
+  protected isPausing = false;
 
   protected stopFunc?: () => Promise<void>;
 
@@ -94,8 +96,8 @@ export abstract class BasePlaylist<
     return this.currentPlaylist.length;
   }
 
-  public isPlaying() {
-    return this.playing;
+  public get playing() {
+    return this.isPlaying;
   }
 
   public getPlayingIndex() {
@@ -161,7 +163,7 @@ export abstract class BasePlaylist<
     this.fileList = [];
     this.shuffledList = undefined;
     this.playingIndex = 0;
-    if (this.playing) this.dispatchEvent(new PlayerEvent('stop'));
+    if (this.isPlaying) this.dispatchEvent(new PlayerEvent('stop'));
     await this.stopInner();
     this.dispatchEvent(new PlayerEvent('change', { list: [] }));
   }
@@ -229,7 +231,7 @@ export abstract class BasePlaylist<
         return;
       }
 
-      this.playing = true;
+      this.isPlaying = true;
       await this.playingPlayer.play();
       await new Promise((resolve) => {
         const clearState = async () => {
@@ -245,19 +247,19 @@ export abstract class BasePlaylist<
           );
         });
         this.playingPlayer?.addEventListener('stop', async () => {
-          if (this.pausing) return;
+          if (this.isPausing) return;
           await clearState();
           resolve(undefined);
         });
 
         this.stopFunc = async () => {
-          this.playing = false;
+          this.isPlaying = false;
           await clearState();
           resolve(undefined);
         };
       });
 
-      if (!this.playing) return;
+      if (!this.isPlaying) return;
       if (this.loopType === LoopType.Single) {
         this.playTask.then(this.flush.bind(this));
         return;
@@ -267,7 +269,7 @@ export abstract class BasePlaylist<
           await this.next();
         } catch (e) {
           // no next
-          this.playing = false;
+          this.isPlaying = false;
           this.playingIndex = -1;
           this.dispatchEvent(new PlayerEvent('switch', { file: undefined }));
           this.dispatchEvent(new PlayerEvent('stop'));
@@ -309,27 +311,27 @@ export abstract class BasePlaylist<
         new PlayerEvent('switch', { file: this.getPlaying() })
       );
     }
-    this.pausing = false;
+    this.isPausing = false;
     await this.flush();
     this.dispatchEvent(new PlayerEvent('play'));
   }
 
   public async pause() {
     if (!this.playingPlayer) throw new Error('Not playing');
-    this.pausing = true;
+    this.isPausing = true;
     await this.playingPlayer.pause();
     this.dispatchEvent(new PlayerEvent('pause'));
   }
 
   public async resume() {
     if (!this.playingPlayer) throw new Error('Not playing');
-    this.pausing = false;
+    this.isPausing = false;
     await this.playingPlayer.resume();
     this.dispatchEvent(new PlayerEvent('resume'));
   }
 
   public async stop() {
-    this.pausing = false;
+    this.isPausing = false;
     await this.stopInner();
     this.dispatchEvent(new PlayerEvent('stop'));
   }

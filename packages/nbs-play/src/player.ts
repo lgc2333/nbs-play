@@ -99,8 +99,8 @@ export abstract class BasePlayer extends PlayerEventTarget<
     return this.playedTicksCounter >= this.length;
   }
 
-  /** 已播放的 tick 数 */
   public get playedTicks() {
+    /** 已播放的 tick 数 */
     return this.playedTicksCounter;
   }
 
@@ -173,7 +173,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
   }
 
   /** 执行 {@link BasePlayer.tick} 后返回当前需要播放的 note 列表 */
-  protected tickNotes(): IPlayNote[] | undefined {
+  protected async tickNotes(): Promise<IPlayNote[] | undefined> {
     const lastTick = Math.ceil(this.playedTicksCounter);
     this.tick();
     const currentTick = Math.ceil(this.playedTicksCounter);
@@ -186,8 +186,8 @@ export abstract class BasePlayer extends PlayerEventTarget<
       // await this.stopPlay();
       return;
     }
-    const notes = this.tickNotes();
-    if (notes) {
+    const notes = await this.tickNotes();
+    if (notes && notes.length) {
       await Promise.all(notes.map((note) => this.playNote.bind(this)(note)));
       this.playedNotesCounter += notes.length;
     }
@@ -215,8 +215,8 @@ export abstract class BasePlayer extends PlayerEventTarget<
   }
 
   /** 开始或继续播放 */
-  public async startPlay(resetProgress: boolean = true) {
-    if (this.playing) throw new Error('Already playing');
+  protected async startPlay(resetProgress: boolean = true) {
+    if (this.playing) return;
     if (resetProgress || this.ended) await this.seek(0);
     await this.prepare();
     this.lastTickTime = Date.now();
@@ -225,11 +225,13 @@ export abstract class BasePlayer extends PlayerEventTarget<
   }
 
   /** 暂停或停止播放 */
-  public async stopPlay(resetProgress: boolean = true) {
-    if (!this.playing) throw new Error('Not playing');
-    await this.stopPlayTask();
+  protected async stopPlay(resetProgress: boolean = true) {
+    const needDispatchEv =
+      this.playing || (resetProgress && this.playedTicks > 0);
+    if (this.playing) await this.stopPlayTask();
     if (resetProgress) this.seek(0);
-    this.dispatchEvent(new PlayerEvent('stop', { resetProgress }));
+    if (needDispatchEv)
+      this.dispatchEvent(new PlayerEvent('stop', { resetProgress }));
   }
 
   public async play() {
