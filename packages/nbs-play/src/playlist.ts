@@ -1,6 +1,7 @@
 import { PlayerEvent, PlayerEventTarget } from './event';
 import { BasePlayer } from './player';
 import { ISong } from './types';
+import { sleep } from './utils';
 
 export interface IPlaylistFile {
   readonly displayString: string;
@@ -64,6 +65,8 @@ export abstract class BasePlaylist<
   F extends IPlaylistFile = IPlaylistFile,
   P extends BasePlayer = BasePlayer
 > extends PlayerEventTarget<BasePlaylist<F, P>, TPlaylistEventMap<F, P>> {
+  public delayTime: number = 1000;
+
   protected loopType: LoopType = LoopType.List;
 
   /** 是否正在播放，内部用 */
@@ -227,7 +230,9 @@ export abstract class BasePlaylist<
         this.playingPlayer = player;
       } catch (e) {
         this.dispatchEvent(new PlayerEvent('error', { error: e }));
-        this.playTask.then(this.next.bind(this));
+        this.playTask
+          .then(() => sleep(this.delayTime))
+          .then(this.next.bind(this));
         return;
       }
 
@@ -264,17 +269,19 @@ export abstract class BasePlaylist<
         this.playTask.then(this.flush.bind(this));
         return;
       }
-      this.playTask.then(async () => {
-        try {
-          await this.next();
-        } catch (e) {
-          // no next
-          this.isPlaying = false;
-          this.playingIndex = -1;
-          this.dispatchEvent(new PlayerEvent('switch', { file: undefined }));
-          this.dispatchEvent(new PlayerEvent('stop'));
-        }
-      });
+      this.playTask
+        .then(() => sleep(this.delayTime))
+        .then(async () => {
+          try {
+            await this.next();
+          } catch (e) {
+            // no next
+            this.isPlaying = false;
+            this.playingIndex = -1;
+            this.dispatchEvent(new PlayerEvent('switch', { file: undefined }));
+            this.dispatchEvent(new PlayerEvent('stop'));
+          }
+        });
     });
   }
 
