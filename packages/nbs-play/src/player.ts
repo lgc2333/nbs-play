@@ -62,17 +62,20 @@ export abstract class BasePlayer extends PlayerEventTarget<
   /** 准备好的 note 播放参数列表，index 与 tick 对应 */
   public readonly playNotes: TPlayNoteLayer[];
 
+  /** 音量，范围应为 `0` ~ `1` */
+  public volume = 0.8;
+
   /** 已播放的 tick 数，内部计数用，不暴露 */
-  protected playedTicksCounter = 0;
+  protected _playedTicks = 0;
 
   /** 已播放的 note 数，内部计数用，不暴露 */
-  protected playedNotesCounter = 0;
+  protected _playedNotes = 0;
 
   /** 播放任务 */
-  protected playTask?: any;
+  protected _playTask?: any;
 
   /** 上一次执行 {@link BasePlayer.tick} 的时间 */
-  protected lastTickTime = 0;
+  protected _lastTickTime = 0;
 
   /** 内置的音色列表，构建 {@link BasePlayer.instruments} 时使用 */
   public get builtinInstruments() {
@@ -81,7 +84,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
 
   /** 是否正在播放 */
   public get playing() {
-    return !!this.playTask;
+    return !!this._playTask;
   }
 
   /** 歌曲长度 (tick) */
@@ -96,17 +99,17 @@ export abstract class BasePlayer extends PlayerEventTarget<
 
   /** 是否已播放到结尾 */
   public get ended() {
-    return this.playedTicksCounter >= this.length;
+    return this._playedTicks >= this.length;
   }
 
   public get playedTicks() {
     /** 已播放的 tick 数 */
-    return this.playedTicksCounter;
+    return this._playedTicks;
   }
 
   /** 已播放的 note 数 */
   public get playedNotes() {
-    return this.playedNotesCounter;
+    return this._playedNotes;
   }
 
   constructor(public readonly song: ISong, options?: any) {
@@ -128,7 +131,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
     const finalPitch = 2 ** ((finalKey - 45) / 12);
     return {
       instrument: note.instrument,
-      velocity: (note.velocity * layer.volume) / 100,
+      velocity: ((note.velocity * layer.volume) / 100) * this.volume,
       panning: finalPanning,
       pitch: finalPitch,
     };
@@ -164,19 +167,19 @@ export abstract class BasePlayer extends PlayerEventTarget<
   /** 根据已经过的时间自增已播放的 tick 数 */
   protected tick(): number {
     const now = Date.now();
-    const delta = now - this.lastTickTime;
-    this.lastTickTime = now;
+    const delta = now - this._lastTickTime;
+    this._lastTickTime = now;
     const passedTicks = (delta * this.song.header.tempo) / 1000;
-    this.playedTicksCounter += passedTicks;
+    this._playedTicks += passedTicks;
     this.dispatchEvent(new PlayerEvent('tick', { passedTicks }));
     return passedTicks;
   }
 
   /** 执行 {@link BasePlayer.tick} 后返回当前需要播放的 note 列表 */
   protected async tickNotes(): Promise<IPlayNote[] | undefined> {
-    const lastTick = Math.ceil(this.playedTicksCounter);
+    const lastTick = Math.ceil(this._playedTicks);
     this.tick();
-    const currentTick = Math.ceil(this.playedTicksCounter);
+    const currentTick = Math.ceil(this._playedTicks);
     return this.getNotesBetween(lastTick, currentTick);
   }
 
@@ -189,7 +192,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
     const notes = await this.tickNotes();
     if (notes && notes.length) {
       await Promise.all(notes.map((note) => this.playNote.bind(this)(note)));
-      this.playedNotesCounter += notes.length;
+      this._playedNotes += notes.length;
     }
     if (this.ended) {
       await this.stopPlay(false);
@@ -205,13 +208,13 @@ export abstract class BasePlayer extends PlayerEventTarget<
 
   /** 启动播放任务，单独出来是为了方便继承类修改逻辑 */
   protected async startPlayTask() {
-    this.playTask = setInterval(this.tickPlay.bind(this), 1);
+    this._playTask = setInterval(this.tickPlay.bind(this), 1);
   }
 
   /** 停止播放任务，单独出来是为了方便继承类修改逻辑 */
   protected async stopPlayTask() {
-    clearInterval(this.playTask);
-    this.playTask = undefined;
+    clearInterval(this._playTask);
+    this._playTask = undefined;
   }
 
   /** 开始或继续播放 */
@@ -219,7 +222,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
     if (this.playing) return;
     if (resetProgress || this.ended) await this.seek(0);
     await this.prepare();
-    this.lastTickTime = Date.now();
+    this._lastTickTime = Date.now();
     await this.startPlayTask();
     this.dispatchEvent(new PlayerEvent('play', { resetProgress }));
   }
@@ -252,9 +255,7 @@ export abstract class BasePlayer extends PlayerEventTarget<
 
   /** 调整播放进度 */
   public async seek(tick: number) {
-    this.playedTicksCounter = tick;
-    this.playedNotesCounter = tick
-      ? this.getNotesBetween(0, tick)?.length || 0
-      : 0;
+    this._playedTicks = tick;
+    this._playedNotes = tick ? this.getNotesBetween(0, tick)?.length || 0 : 0;
   }
 }

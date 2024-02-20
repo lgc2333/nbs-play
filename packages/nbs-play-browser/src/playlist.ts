@@ -1,14 +1,7 @@
-import { BasePlaylist, IPlaylistFile, ISong, parse } from 'nbs-play';
+import { BasePlaylist, BasePlaylistFile, ISong, parse } from 'nbs-play';
 import { BrowserPlayer, BrowserPlayerOptions } from './player';
 
-export class BrowserPlaylistFile implements IPlaylistFile {
-  constructor(
-    public readonly url: string,
-    public readonly displayString: string = ''
-  ) {
-    if (!displayString) this.displayString = url.split('/').pop()!;
-  }
-
+export class BrowserPlaylistFile extends BasePlaylistFile {
   public async read(): Promise<ISong> {
     return parse(await (await fetch(this.url)).arrayBuffer());
   }

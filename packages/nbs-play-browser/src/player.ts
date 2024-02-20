@@ -6,6 +6,20 @@ export type BrowserPlayerOptions = {
   soundPath: string;
 };
 
+export async function fetchAudioBuffer(
+  path: string
+): Promise<AudioBuffer | undefined> {
+  try {
+    const response = await fetch(path);
+    const arrayBuffer = await response.arrayBuffer();
+    return await audioContext.decodeAudioData(arrayBuffer);
+  } catch (e) {
+    console.error(`Failed to fetch audio ${path}`);
+    console.error(e);
+  }
+  return undefined;
+}
+
 /** 浏览器 NBS 播放器实现 */
 export class BrowserPlayer extends BasePlayer {
   /** 音色音效文件基路径 */
@@ -13,9 +27,6 @@ export class BrowserPlayer extends BasePlayer {
 
   /** 已加载音色音效数据，index 与 {@link BasePlayer.instruments} 对应 */
   public loadedInstruments: (AudioBuffer | undefined)[] = [];
-
-  /** 音量，范围应为 `0` ~ `1` */
-  public volumeMultiplier = 0.8;
 
   constructor(song: ISong, options?: BrowserPlayerOptions) {
     super(song, options);
@@ -26,23 +37,12 @@ export class BrowserPlayer extends BasePlayer {
 
   /** 从给定 URL 获取 AudioBuffer */
   // eslint-disable-next-line class-methods-use-this
-  async fetchAudioBuffer(path: string): Promise<AudioBuffer | undefined> {
-    try {
-      const response = await fetch(path);
-      const arrayBuffer = await response.arrayBuffer();
-      return await audioContext.decodeAudioData(arrayBuffer);
-    } catch (e) {
-      console.error(`Failed to fetch audio ${path}`);
-      console.error(e);
-    }
-    return undefined;
-  }
 
   /** 加载音色音效数据 */
-  async loadInstrumentSound(): Promise<void> {
+  public async loadInstrumentSound(): Promise<void> {
     await Promise.all(
       this.instruments.map(async (instrument, i) => {
-        const audioBuffer = await this.fetchAudioBuffer(
+        const audioBuffer = await fetchAudioBuffer(
           `${this.soundPath}${instrument.file}`
         );
         this.loadedInstruments[i] = audioBuffer;
@@ -66,7 +66,7 @@ export class BrowserPlayer extends BasePlayer {
     sourceNode = bufferSource;
 
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = (note.velocity / 100) * this.volumeMultiplier; // Decrease volume to avoid peaking
+    gainNode.gain.value = note.velocity / 100;
     sourceNode = bufferSource.connect(gainNode);
 
     if (note.panning) {
