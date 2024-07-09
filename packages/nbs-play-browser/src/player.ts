@@ -1,38 +1,36 @@
-import { BasePlayer, IPlayNote, ISong } from 'nbs-play';
+import { BasePlayer, IPlayNote, ISong } from 'nbs-play'
 
-export const audioContext = new AudioContext();
+export const audioContext = new AudioContext()
 
 export type BrowserPlayerOptions = {
-  soundPath: string;
-};
+  soundPath: string
+}
 
-export async function fetchAudioBuffer(
-  path: string
-): Promise<AudioBuffer | undefined> {
+export async function fetchAudioBuffer(path: string): Promise<AudioBuffer | undefined> {
   try {
-    const response = await fetch(path);
-    const arrayBuffer = await response.arrayBuffer();
-    return await audioContext.decodeAudioData(arrayBuffer);
+    const response = await fetch(path)
+    const arrayBuffer = await response.arrayBuffer()
+    return await audioContext.decodeAudioData(arrayBuffer)
   } catch (e) {
-    console.error(`Failed to fetch audio ${path}`);
-    console.error(e);
+    console.error(`Failed to fetch audio ${path}`)
+    console.error(e)
   }
-  return undefined;
+  return undefined
 }
 
 /** 浏览器 NBS 播放器实现 */
 export class BrowserPlayer extends BasePlayer {
   /** 音色音效文件基路径 */
-  public soundPath: string;
+  public soundPath: string
 
   /** 已加载音色音效数据，index 与 {@link BasePlayer.instruments} 对应 */
-  public loadedInstruments: (AudioBuffer | undefined)[] = [];
+  public loadedInstruments: (AudioBuffer | undefined)[] = []
 
   constructor(song: ISong, options?: BrowserPlayerOptions) {
-    super(song, options);
-    const { soundPath } = options || {};
-    if (!soundPath) throw new Error('soundPath is required');
-    this.soundPath = soundPath.endsWith('/') ? soundPath : `${soundPath}/`;
+    super(song, options)
+    const { soundPath } = options || {}
+    if (!soundPath) throw new Error('soundPath is required')
+    this.soundPath = soundPath.endsWith('/') ? soundPath : `${soundPath}/`
   }
 
   /** 从给定 URL 获取 AudioBuffer */
@@ -43,38 +41,38 @@ export class BrowserPlayer extends BasePlayer {
     await Promise.all(
       this.instruments.map(async (instrument, i) => {
         const audioBuffer = await fetchAudioBuffer(
-          `${this.soundPath}${instrument.file}`
-        );
-        this.loadedInstruments[i] = audioBuffer;
-      })
-    );
+          `${this.soundPath}${instrument.file}`,
+        )
+        this.loadedInstruments[i] = audioBuffer
+      }),
+    )
   }
 
   protected override async prepare(): Promise<void> {
-    await this.loadInstrumentSound();
+    await this.loadInstrumentSound()
   }
 
   override async playNote(note: IPlayNote): Promise<void> {
-    const audio = this.loadedInstruments[note.instrument];
-    if (!audio) return;
+    const audio = this.loadedInstruments[note.instrument]
+    if (!audio) return
 
-    let sourceNode: AudioNode;
-    const bufferSource = audioContext.createBufferSource();
-    bufferSource.buffer = audio;
-    bufferSource.start(0);
-    bufferSource.playbackRate.value = note.pitch;
-    sourceNode = bufferSource;
+    let sourceNode: AudioNode
+    const bufferSource = audioContext.createBufferSource()
+    bufferSource.buffer = audio
+    bufferSource.start(0)
+    bufferSource.playbackRate.value = note.pitch
+    sourceNode = bufferSource
 
-    const gainNode = audioContext.createGain();
-    gainNode.gain.value = note.velocity / 100;
-    sourceNode = bufferSource.connect(gainNode);
+    const gainNode = audioContext.createGain()
+    gainNode.gain.value = note.velocity / 100
+    sourceNode = bufferSource.connect(gainNode)
 
     if (note.panning) {
-      const panningNode = audioContext.createStereoPanner();
-      panningNode.pan.value = note.panning / 100;
-      sourceNode = gainNode.connect(panningNode);
+      const panningNode = audioContext.createStereoPanner()
+      panningNode.pan.value = note.panning / 100
+      sourceNode = gainNode.connect(panningNode)
     }
 
-    sourceNode.connect(audioContext.destination);
+    sourceNode.connect(audioContext.destination)
   }
 }
