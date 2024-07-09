@@ -10,8 +10,7 @@
   ],
   "scripts": {
     "build": "tsc -b && dumble",
-    "watch": "tsc -w",
-    "clean": "tsc --clean"
+    "clean": "rimraf ./dist"
   },
   "keywords": [
     "nbs",
@@ -28,6 +27,7 @@
   "funding": "https://afdian.net/a/lgc2333",
   "devDependencies": {
     "typescript": "^5.3.3",
-    "dumble": "^0.2.0"
+    "dumble": "^0.2.0",
+    "rimraf": "^6.0.0"
   }
 }
