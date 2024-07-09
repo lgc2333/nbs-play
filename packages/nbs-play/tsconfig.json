@@ -1,11 +1,8 @@
 {
   "extends": "../../tsconfig.base",
-  "include": ["./src/**/*"],
+  "include": ["src"],
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "rootDir": "./src",
-    "outDir": "./dist",
-    "tsBuildInfoFile": "./tsconfig.tsbuildinfo"
+    "rootDir": "src",
+    "outDir": "dist"
   }
 }

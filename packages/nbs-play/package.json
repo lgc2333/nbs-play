@@ -9,9 +9,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b && dumble",
     "watch": "tsc -w",
-    "clean": "rimraf ./dist && rimraf ./tsconfig.tsbuildinfo"
+    "clean": "tsc --clean"
   },
   "keywords": [
     "nbs",
@@ -27,7 +27,7 @@
   "license": "MIT",
   "funding": "https://afdian.net/a/lgc2333",
   "devDependencies": {
-    "rimraf": "^5.0.5",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "dumble": "^0.2.0"
   }
 }

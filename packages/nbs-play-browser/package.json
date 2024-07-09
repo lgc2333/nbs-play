@@ -8,8 +8,12 @@
     "dist"
   ],
   "scripts": {
-    "build": "rollup -c && rimraf ./dist/dts-tmp && node -e \"require('fs').writeFileSync('./dist/index.d.ts', 'import * as m from \\'./bundle\\';\\ndeclare global {\\n    var nbsPlay = m;\\n}')\"",
-    "clean": "rimraf ./dist"
+    "build:build": "tsc -b && esbuild src/index.ts --bundle --format=iife --global-name=nbsPlay --outfile=dist/index.js",
+    "build:post:mv": "node -e \"require('fs').renameSync('./dist/index.d.ts', './dist/bundle.d.ts')\"",
+    "build:post:dts": "node -e \"require('fs').writeFileSync('./dist/index.d.ts', 'import * as m from \\'./bundle\\';\\ndeclare global {\\n    var nbsPlay = m;\\n}')\"",
+    "build:post": "pnpm build:post:mv && pnpm build:post:dts",
+    "build": "pnpm build:build && pnpm build:post",
+    "clean": "tsc --clean"
   },
   "keywords": [
     "nbs",
@@ -28,13 +32,7 @@
     "nbs-play": "workspace:^"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^11.1.6",
-    "rollup": "^4.12.0",
-    "rollup-plugin-dts": "^6.1.0",
-    "typescript": "^5.3.3",
-    "tslib": "^2.6.2",
-    "rimraf": "^5.0.5"
+    "esbuild": "^0.23.0",
+    "typescript": "^5.3.3"
   }
 }
