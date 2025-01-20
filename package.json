@@ -1,15 +1,15 @@
 {
   "name": "nbs-play-workspace",
+  "packageManager": "yarn@4.6.0",
   "private": true,
-  "version": "0.1.0",
-  "description": "A Library for playing nbs files",
+  "version": "0",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm run -r build",
-    "test": "pnpm build && cd test && node --enable-source-maps .",
-    "clean": "pnpm run -r clean"
+    "build": "yarn workspaces foreach -Wpt run build",
+    "test": "yarn build && cd test && node --enable-source-maps .",
+    "clean": "yarn workspaces foreach -Wpt run clean"
   },
   "keywords": [
     "nbs",
@@ -22,18 +22,15 @@
   "funding": "https://afdian.net/a/lgc2333",
   "devDependencies": {
     "@cordisjs/eslint-config": "^1.1.1",
-    "@types/node": "^20.14.10",
-    "@typescript-eslint/eslint-plugin": "^7.16.0",
-    "@typescript-eslint/parser": "^7.16.0",
-    "dumble": "^0.2.0",
-    "eslint": "^8.57.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-jsx-a11y": "^6.9.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-n": "^16.6.2",
-    "eslint-plugin-promise": "^6.4.0",
-    "eslint-plugin-react": "^7.34.3",
+    "eslint-plugin-promise": "^6.6.0",
+    "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^4.6.2",
-    "typescript": "^5.5.3",
-    "rimraf": "^5.0.9"
+    "typescript": "^5.7.3"
   }
 }

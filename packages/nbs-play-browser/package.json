@@ -11,9 +11,9 @@
     "build:build": "tsc -b && esbuild src/index.ts --bundle --format=iife --global-name=nbsPlay --outfile=dist/index.js",
     "build:post:mv": "node -e \"require('fs').renameSync('./dist/index.d.ts', './dist/bundle.d.ts')\"",
     "build:post:dts": "node -e \"require('fs').writeFileSync('./dist/index.d.ts', 'import * as m from \\'./bundle\\';\\ndeclare global {\\n    var nbsPlay = m;\\n}')\"",
-    "build:post": "pnpm build:post:mv && pnpm build:post:dts",
-    "build": "pnpm build:build && pnpm build:post",
-    "clean": "rimraf ./dist"
+    "build:post": "yarn build:post:mv && yarn build:post:dts",
+    "build": "yarn build:build && yarn build:post",
+    "clean": "rimraf ./dist && rimraf tsconfig.tsbuildinfo"
   },
   "keywords": [
     "nbs",
@@ -32,8 +32,8 @@
     "nbs-play": "workspace:^"
   },
   "devDependencies": {
-    "esbuild": "^0.23.0",
-    "rimraf": "^6.0.0",
-    "typescript": "^5.3.3"
+    "esbuild": "^0.24.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.3"
   }
 }
